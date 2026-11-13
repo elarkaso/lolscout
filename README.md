@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.svg" alt="lolscout – scout players from provided EUN matches through official Riot API" width="100%"></p>
+
 # lolscout
 
 Scouting soupeřů v League of Legends přes **oficiální Riot API**. Zadáš zápas soupeře nebo jména hráčů a dostaneš Markdown report: rank, formu, role, nejhranější championy, mastery a kandidáty na ban.
