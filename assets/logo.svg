@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="lsbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1F3A"/><stop offset="1" stop-color="#123B4A"/>
+    </linearGradient>
+    <linearGradient id="lsbar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#14B8A6"/><stop offset="1" stop-color="#5EEAD4"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#lsbg)"/>
+  <!-- sloupcový graf (statistiky) -->
+  <g transform="translate(58 150)">
+    <rect x="0"  y="-30" width="20" height="30" rx="4" fill="url(#lsbar)" opacity=".55"/>
+    <rect x="28" y="-58" width="20" height="58" rx="4" fill="url(#lsbar)" opacity=".75"/>
+    <rect x="56" y="-44" width="20" height="44" rx="4" fill="url(#lsbar)" opacity=".65"/>
+    <rect x="84" y="-80" width="20" height="80" rx="4" fill="url(#lsbar)"/>
+  </g>
+  <!-- lupa (scouting) -->
+  <circle cx="122" cy="112" r="62" fill="#fff" fill-opacity=".06" stroke="#FBBF24" stroke-width="12"/>
+  <line x1="168" y1="158" x2="206" y2="196" stroke="#FBBF24" stroke-width="18" stroke-linecap="round"/>
+  <!-- trend -->
+  <polyline points="70,128 98,104 126,116 160,78" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="160" cy="78" r="7" fill="#fff"/>
+</svg>
