@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m py_compile *)",
+      "Bash(.venv/bin/python -m pytest *)",
+      "Bash(.venv/bin/python -m unittest *)",
+      "Bash(.venv/bin/python lolscout.py --help)",
+      "Bash(.venv/bin/python - *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(ls *)"
+    ],
+    "ask": [
+      "Bash(.venv/bin/python lolscout.py *)",
+      "Bash(python lolscout.py *)",
+      "Bash(python3 lolscout.py *)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(pip install *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*.local)",
+      "Edit(./.env)",
+      "Write(./.env)",
+      "Bash(cat .env*)",
+      "Bash(printenv*)",
+      "Bash(env)",
+      "Bash(rm -rf*)",
+      "Bash(rm -r .lolscout-cache*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)"
+    ]
+  }
+}
