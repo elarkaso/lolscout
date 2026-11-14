@@ -1,38 +1,43 @@
 # lolscout – pokyny pro Claude Code
 
-CLI nástroj pro scouting soupeřů v League of Legends přes **oficiální Riot API**. Vstup: Riot match ID (`EUN1_…`) nebo Riot ID (`Jméno#TAG`); výstup: Markdown report (`scout_<datum>.md`), volitelně JSON. Uživatel je český, hraje amatérské turnaje (Challengermode, EUNE). Komunikace, komentáře a texty reportu česky; identifikátory anglicky (výjimky `her()`, `posledni()` jsou české skloňování – nech je).
+CLI nástroje pro scouting v League of Legends přes **oficiální Riot API**. Uživatel je český, hraje amatérské turnaje (Challengermode, EUNE). Komunikace, komentáře a texty reportu česky; identifikátory anglicky (výjimky `her()`, `posledni()` jsou české skloňování – nech je).
 
-Projekt je **MVP v jednom souboru** a bude se rozšiřovat. Zdrojem pravdy je kód, ne README.
+- `lolscout.py` – týmový scouting: vstup Riot match ID (`EUN1_…`) nebo několik Riot ID → Markdown report (`scout_<datum>.md`), volitelně JSON.
+- `player-scout.py` – hloubková analýza jednoho hráče podle Riot ID → `scout_<Jméno-TAG>_<datum>.md`, volitelně JSON.
+
+Projekt je **MVP** a bude se rozšiřovat. Zdrojem pravdy je kód, ne README.
 
 ## Stack
 
 - Python 3.14 (`.venv`, mise), jediná závislost `requests` (`requirements.txt`). Žádný `pyproject.toml`, žádné testy, žádný linter.
-- `lolscout.py` (~580 ř.) je rozdělený komentářovými sekcemi `# ---- <název>`:
+- **`lolscout.py` je zároveň sdílená knihovna**: `player-scout.py` ho importuje (`import lolscout as ls`) a používá `Riot`, `Champions`, konstanty a helpery (`participant`, `riot_id_of`, `game_seconds`, `pct`, `kda`, `her`, `posledni`, `rank_str`, `ban_candidates`, `opgg_link`, `load_dotenv`, `split_riot_id`, `log`). Změna těchto jmen nebo signatur = uprav oba skripty. Import `lolscout` nesmí mít vedlejší efekty (vše spustitelné jen pod `if __name__ == "__main__"`).
+- `lolscout.py` (~590 ř.) je rozdělený komentářovými sekcemi `# ---- <název>`:
 
 | Sekce | Obsah |
 |---|---|
 | konstanty | `PLATFORMS` (alias → platforma), `REGIONAL` (platforma → regionální routing), `OPGG_REGION`, `QUEUE_FILTER`, `QUEUE_NAMES`, `ROLE_CZ`, `TIER_CZ`, `MATCH_ID_RE`, `REMAKE_SECONDS` |
 | rate limit | `RateLimiter` – klouzavé okno, jeden limiter na routing host |
-| API klient | `Riot.get()` – cache → limiter → HTTP s retry (429 `Retry-After`, 5xx backoff, 404 → `None`, 401/403 → `sys.exit`); endpointy `account_by_*`, `match`, `match_ids`, `league`, `mastery_top` |
+| API klient | `Riot.get()` – cache → limiter → HTTP s retry (429 `Retry-After`, 5xx backoff, 404 → `None`, 401/403 → `sys.exit`); endpointy `account_by_*` (host `account_host`), `match`, `match_ids`, `league`, `mastery_top`, `summoner` |
 | championi | `Champions` – Data Dragon, bez klíče, cache 7 dní |
-| statistiky | čisté funkce: `player_stats`, `rank_str`, `short_rank`, `ban_candidates`, `pct`, `kda` |
+| statistiky | čisté funkce: `player_stats`, `game_seconds`, `rank_str`, `short_rank`, `ban_candidates`, `pct`, `kda` |
 | report | `render(players, meta, platform)` → Markdown string |
 | hlavní logika | `load_dotenv`, `split_riot_id`, `main(argv)` – CLI, výběr týmu (`--us`/`--side`), sběr dat, zápis |
 
 - Datový tok: `main` → hráči (`dict` podle puuid) → `riot.*` → `player_stats` → `render` → soubor. Slovník hráče: `puuid, name, team?, in_matches[], stats, league, mastery?, league_role?`. Tvar `stats` z `player_stats` je kontrakt pro `render`, `ban_candidates` i `--json` výstup.
+- `player-scout.py` má stejné sekce. Tok: `main` → `account_by_riot_id` → `summoner` (404 = hráč není na platformě) → `match_ids` + `match` → `game_record` (plochý dict na hru, metriky z `challenges` mohou být `None`) → `analyze` (agregace, `summary` nad libovolnou podmnožinou her) → `notes` (postřehy s prahy v konstantách) → `render`. Prázdné `games` musí projít celým tokem.
 
 ## Příkazy
 
-- Kontrola syntaxe: `.venv/bin/python -m py_compile lolscout.py`
+- Kontrola syntaxe: `.venv/bin/python -m py_compile lolscout.py player-scout.py`
 - Offline ověření (bez API klíče a sítě, nad `.lolscout-cache/`): skill `/verify`.
-- Ostrý běh: `.venv/bin/python lolscout.py EUN1_… --us "Nick#TAG"` – spotřebuje kvótu klíče uživatele a jde na síť. **Spouštěj jen se souhlasem uživatele**; `.env` s klíčem existuje, nečti ho.
-- Nápověda CLI: `.venv/bin/python lolscout.py --help`
+- Ostrý běh: `.venv/bin/python lolscout.py EUN1_… --us "Nick#TAG"` nebo `.venv/bin/python player-scout.py "Nick#TAG"` – spotřebuje kvótu klíče uživatele a jde na síť. **Spouštěj jen se souhlasem uživatele**; `.env` s klíčem existuje, nečti ho.
+- Nápověda CLI: `.venv/bin/python lolscout.py --help`, `.venv/bin/python player-scout.py --help`
 
 ## Invarianty – neporušuj
 
 - **Rate limit:** každý požadavek na Riot API jde přes `Riot.get()` (limiter + retry + cache). Žádné přímé `requests.get` na `*.api.riotgames.com`. Výchozí limity = personal/dev klíč (20/1 s, 100/120 s), `--production-limits` = 500/10 s, 30000/600 s.
-- **Cache (`.lolscout-cache/`, klíč → soubor přes `_cache_path`):** odehraný zápas nemá TTL; ostatní data mají TTL (ids 10 min, league 30 min, mastery 1 den, account 7 dní). Nová data = nový prefix klíče a vědomě zvolené TTL. Změna tvaru uložených dat vyžaduje nový prefix, jinak se načte stará cache.
-- **Routing:** account-v1 a match-v5 jdou na regionální host (`REGIONAL`), league-v4 a champion-mastery-v4 na platformu. Viz skill `riot-api`.
+- **Cache (`.lolscout-cache/`, klíč → soubor přes `_cache_path`):** odehraný zápas nemá TTL; ostatní data mají TTL (ids 10 min, league 30 min, mastery a summoner 1 den, account 7 dní). Nová data = nový prefix klíče a vědomě zvolené TTL; parametry měnící odpověď patří do klíče. Změna tvaru uložených dat vyžaduje nový prefix, jinak se načte stará cache. Oba skripty sdílí jednu cache.
+- **Routing:** match-v5 jde na regionální host (`REGIONAL`), account-v1 na `account_host` (bez `sea`), league-v4, champion-mastery-v4 a summoner-v4 na platformu. Viz skill `riot-api`.
 - **Statistiky:** remaky (< `REMAKE_SECONDS`) se nepočítají; `gameDuration` u starých zápasů je v ms; role jen z `ROLE_CZ`; `teamPosition` může být prázdné.
 - **Riot pravidla:** API klíč nikdy do gitu ani do výstupu/logu. Personal klíč nesmí pohánět veřejnou aplikaci (web/bot pro cizí lidi = production klíč – eskaluj). Custom/turnajové hry (queue 0) jen s `--queue all` a reporty zůstávají v týmu. Disclaimer „isn't endorsed by Riot Games…“ musí zůstat v README i v reportu.
 - **Výstup:** CLI log jde na stderr (`log()`), report do souboru. Chybové stavy pro uživatele = `sys.exit("Chyba: …")` česky, bez tracebacku. Čeština ve výstupu musí sedět gramaticky (`her()`, `posledni()`).
@@ -40,7 +45,7 @@ Projekt je **MVP v jednom souboru** a bude se rozšiřovat. Zdrojem pravdy je k�
 
 ## Rozšiřování
 
-- Malé funkce přidávej do odpovídající sekce `lolscout.py`. Rozdělení na balíček (`lolscout/` s moduly api/stats/report/cli) nebo přidání testovací infrastruktury navrhuje `architect` až ve chvíli, kdy to konkrétní změna potřebuje – ne preventivně.
+- Malé funkce přidávej do odpovídající sekce příslušného skriptu; co potřebují oba skripty, patří do `lolscout.py`. Rozdělení na balíček (`lolscout/` s moduly api/stats/report/cli) nebo přidání testovací infrastruktury navrhuje `architect` až ve chvíli, kdy to konkrétní změna potřebuje – ne preventivně. Další skript = stejný vzor jako `player-scout.py` (import `lolscout`, žádná kopie API klienta).
 - Nové závislosti jen s odůvodněním (stdlib má přednost); přidej do `requirements.txt`.
 - Až vzniknou testy: nejdřív čisté funkce (`player_stats`, `ban_candidates`, `render`, `rank_str`, skloňování) nad JSON fixtures. Fixtures odvozené z cache anonymizuj (puuid, Riot ID jsou údaje reálných hráčů).
 - `.gitignore` ignoruje `*.json` a `scout_*.md` – nové verzované JSON soubory potřebují výjimku `!cesta`.

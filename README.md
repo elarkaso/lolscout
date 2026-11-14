@@ -83,6 +83,29 @@ python lolscout.py "Hrac1#EUNE" "Hrac2#EUNE" "Hrac3#EUNE"
 | `--no-mastery` | Nestahovat mastery (o 1 požadavek na hráče méně). |
 | `--production-limits` | Pokud máš production klíč s vyššími limity. |
 
+## Hloubková analýza jednoho hráče
+
+`player-scout.py` rozebere jednoho hráče podle Riot ID podrobněji než týmový report:
+
+```bash
+python player-scout.py "Hrac#EUNE"
+python player-scout.py "Hrac#EUNE" --games 100 --queue solo --json hrac.json
+→ scout_Hrac-EUNE_2026-11-14_2130.md
+```
+
+Report obsahuje:
+- rank, level účtu a upozornění na možný smurf (nízký level a vysoký rank),
+- souhrn: WR, KDA, kill participation, podíl na poškození týmu, poškození, CS, gold a vision za minutu, control wardy,
+- formu, aktuální sérii, trend posledních 10 her a kdy a jak často hraje,
+- role a champion pool s WR, KDA, CS/min, DMG/min a KP u každého championa,
+- mastery top 10 a pocket picky (vysoká mastery, ale v analyzovaných hrách je nehrál),
+- lajnovací fázi: CS v 10. minutě, náskok v gold+XP, solo killy, first blood,
+- srovnání výher a proher a winrate podle délky hry,
+- soupeře v lajně a opakované spoluhráče (pravděpodobné duo nebo premade),
+- postřehy pro draft s kandidáty na ban a tabulku posledních 15 her.
+
+Přepínače jsou stejné jako u `lolscout.py` (`--games`, `--queue`, `--region`, `-o`, `--json`, `--no-mastery`, `--production-limits`). Jen `--games` má výchozí hodnotu 50. Jeden běh stojí zhruba `--games` + 5 požadavků, takže s personal klíčem trvá 50 her pár sekund a 100 her kolem 2 minut. Sdílí `.env` i `.lolscout-cache/` s `lolscout.py`.
+
 ## Jak to funguje
 
 1. Ze zápasu (Match-V5) vezme 10 hráčů a podle `--us` nebo `--side` vybere soupeře.

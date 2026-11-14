@@ -12,11 +12,11 @@ Před použitím endpointu, který zde není, ověř jeho detail na https://deve
 
 | API | Host | V kódu |
 |---|---|---|
-| account-v1 (`/riot/account/v1/…`) | regionální: **jen** `americas`, `asia`, `europe` (libovolný účet z kteréhokoli; `sea` neexistuje) | `self.regional` |
+| account-v1 (`/riot/account/v1/…`) | regionální: **jen** `americas`, `asia`, `europe` (libovolný účet z kteréhokoli; `sea` neexistuje) | `self.account_host` (`sea` → `asia`) |
 | match-v5 (`/lol/match/v5/…`) | regionální: `americas`, `asia`, `europe`, `sea` (oc1 → `sea`) | `self.regional` |
 | league-v4, champion-mastery-v4, summoner-v4, spectator-v5 | platforma: `eun1`, `euw1`, `na1`, `kr`, … | `self.platform` |
 
-Mapování je v `PLATFORMS` (CLI alias → platforma) a `REGIONAL` (platforma → regionální host). Známá mezera: `REGIONAL["oc1"] = "sea"` je správně pro match-v5, ale špatně pro account-v1 (Riot ID lookup s `--region oce`). Nové platformy (např. `me1`, `sg2`, `tw2`, `vn2`) přidávej do všech tří map (`PLATFORMS`, `REGIONAL`, `OPGG_REGION`).
+Mapování je v `PLATFORMS` (CLI alias → platforma) a `REGIONAL` (platforma → regionální host pro match-v5); account-v1 používá `account_host`. Nové platformy (např. `me1`, `sg2`, `tw2`, `vn2`) přidávej do všech tří map (`PLATFORMS`, `REGIONAL`, `OPGG_REGION`).
 
 ## Používané endpointy a cache
 
@@ -27,7 +27,8 @@ Mapování je v `PLATFORMS` (CLI alias → platforma) a `REGIONAL` (platforma �
 | `match` | `/lol/match/v5/matches/{id}` | `match/{id}` | bez expirace (odehraný zápas se nemění) |
 | `match_ids` | `/lol/match/v5/matches/by-puuid/{puuid}/ids` (`count` ≤ 100, `type=ranked` nebo `queue=`) | `ids/{puuid}_{queue}_{count}` | 10 min |
 | `league` | `/lol/league/v4/entries/by-puuid/{puuid}` | `league/{puuid}` | 30 min |
-| `mastery_top` | `/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top` | `mastery/{puuid}` | 1 den |
+| `mastery_top` | `/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top` (`count`) | `mastery/{puuid}_{count}` | 1 den |
+| `summoner` | `/lol/summoner/v4/summoners/by-puuid/{puuid}` (level, ikona; 404 = účet není na platformě) | `summoner/{platform}/{puuid}` | 1 den |
 
 Pravidla pro nová data: unikátní prefix klíče; TTL podle toho, jak rychle se data mění (živá hra = žádná cache, rank = desítky minut, statická data = dny); parametry, které mění odpověď, patří do klíče. Klíč se převádí na název souboru (`_cache_path`), `/` a `#` se mění na `_`.
 
@@ -45,6 +46,7 @@ Pravidla pro nová data: unikátní prefix klíče; TTL podle toho, jak rychle s
 - `riotIdGameName`/`riotIdTagline` mohou chybět u starých zápasů → `account_by_puuid`.
 - `teamId` 100 = blue, 200 = red. `queueId` 420 solo, 440 flex, 0 custom/turnaj.
 - `championName` je interní ID (např. `MonkeyKing`) → zobrazované jméno přes `Champions.name()`.
+- `participants[].challenges` chybí u starých zápasů a některých módů → metriky z nich musí snést `None`. Hodnoty jsou **prahové příznaky výzev**, ne obecné metriky: např. `laningPhaseGoldExpAdvantage` = 1 jen při ≥ 20 % náskoku gold+XP nad soupeřem na roli ve 14. min (cca 12 % her), proto se porovnává s příznakem soupeře. Před použitím nového klíče z `challenges` ověř jeho význam a rozložení nad cache.
 
 ## Data Dragon
 

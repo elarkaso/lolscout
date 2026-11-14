@@ -87,6 +87,8 @@ class Riot:
     def __init__(self, key, platform, cache_dir, limits):
         self.platform = platform
         self.regional = REGIONAL[platform]
+        # account-v1 má jen americas/asia/europe (účet lze dohledat z kteréhokoli)
+        self.account_host = "asia" if self.regional == "sea" else self.regional
         self.s = requests.Session()
         self.s.headers.update({"X-Riot-Token": key, "User-Agent": "lolscout/1.0"})
         self.cache = Path(cache_dir)
@@ -149,12 +151,12 @@ class Riot:
 
     # -- endpointy
     def account_by_riot_id(self, name, tag):
-        return self.get(self.regional,
+        return self.get(self.account_host,
                         f"/riot/account/v1/accounts/by-riot-id/{quote(name)}/{quote(tag)}",
                         cache_key=f"acc/{name.lower()}#{tag.lower()}", ttl=7 * 86400)
 
     def account_by_puuid(self, puuid):
-        return self.get(self.regional, f"/riot/account/v1/accounts/by-puuid/{puuid}",
+        return self.get(self.account_host, f"/riot/account/v1/accounts/by-puuid/{puuid}",
                         cache_key=f"accp/{puuid}", ttl=7 * 86400)
 
     def match(self, match_id):
@@ -178,7 +180,12 @@ class Riot:
     def mastery_top(self, puuid, count=5):
         return self.get(self.platform,
                         f"/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top",
-                        params={"count": count}, cache_key=f"mastery/{puuid}", ttl=86400) or []
+                        params={"count": count}, cache_key=f"mastery/{puuid}_{count}", ttl=86400) or []
+
+    def summoner(self, puuid):
+        # None = hráč nemá účet na této platformě
+        return self.get(self.platform, f"/lol/summoner/v4/summoners/by-puuid/{puuid}",
+                        cache_key=f"summoner/{self.platform}/{puuid}", ttl=86400)
 
 
 # --------------------------------------------------------------------------- championi (Data Dragon)
@@ -246,14 +253,17 @@ def kda(k, d, a):
     return (k + a) / max(1, d)
 
 
+def game_seconds(info):
+    dur = info.get("gameDuration", 0)
+    return dur // 1000 if dur > 100000 else dur   # velmi staré zápasy uvádějí ms
+
+
 def player_stats(puuid, matches, champs):
     games = []
     for m in matches:
         info = m["info"]
         p = participant(m, puuid)
-        dur = info.get("gameDuration", 0)
-        if dur > 100000:            # velmi staré zápasy uvádějí ms
-            dur //= 1000
+        dur = game_seconds(info)
         if not p or dur < REMAKE_SECONDS:
             continue
         games.append({
