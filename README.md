@@ -120,6 +120,7 @@ Přepínače jsou stejné jako u `lolscout.py` (`--games`, `--queue`, `--region`
 - Riot API nezná týmy z Challengermode. Lineup proto bereš z **odehraného** zápasu soupeře (Riot match ID), nebo zadáš Riot ID ručně.
 - **Custom/turnajové hry** (queue 0) se do statistik nepočítají, pokud nepoužiješ `--queue all`. Podle pravidel Riotu se jejich historie nesmí veřejně zobrazovat bez souhlasu hráče, takže reporty nech jen pro tým.
 - Personal klíč nesmí pohánět veřejnou aplikaci. Pro web nebo bota pro cizí lidi je potřeba production klíč.
+- Cache v `.lolscout-cache/` platí jen pro klíče jedné aplikace v Riot Developer Portalu (PUUID hráčů jsou šifrované pro každou aplikaci zvlášť). Po přechodu na klíč jiné aplikace skončí běh chybou o nerozšifrovaném PUUID – starou cache přesuň stranou (`mv .lolscout-cache .lolscout-cache.old`).
 
 ---
 

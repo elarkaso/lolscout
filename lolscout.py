@@ -142,6 +142,17 @@ class Riot:
             if r.status_code in (401, 403):
                 sys.exit("Chyba: API klíč je neplatný nebo vypršel (vývojový klíč platí 24 h). "
                          "Vygeneruj nový na https://developer.riotgames.com")
+            if r.status_code == 400:
+                try:
+                    msg = r.json().get("status", {}).get("message", "")
+                except ValueError:
+                    msg = ""
+                if "decrypt" in msg.lower():
+                    sys.exit(f"Chyba: Riot nerozšifroval PUUID z cache ({self.cache}). PUUID jsou šifrované "
+                             "pro každou aplikaci v Riot Developer Portalu zvlášť a cache pochází z klíče "
+                             "jiné aplikace (např. přechod z development na personal klíč). Přesuň starou "
+                             f"cache stranou a spusť znovu: mv {self.cache} {self.cache}.old")
+                sys.exit(f"Chyba: Riot API odmítlo požadavek (400 Bad Request): {msg or path}")
             r.raise_for_status()
             data = r.json()
             if cache_key:
